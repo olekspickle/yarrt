@@ -1,4 +1,4 @@
-use crate::{ray_color, scene::Camera, BoxedSurface};
+use crate::{pixel_color, scene::Camera, BoxedSurface};
 use image::Rgb;
 use rayon::prelude::*;
 use std::time::Instant;
@@ -7,7 +7,7 @@ pub const DIM: f32 = 200.0;
 pub const HEIGHT: f32 = DIM;
 pub const WIDTH: f32 = DIM * 2.0;
 pub const ANTIALIASING: i32 = 50;
-pub const DEPTH: i32 = 1;
+pub const DEPTH: i32 = 3;
 
 /// The heavy lifting starts here.
 /// This function allocates with size exactly if images pixels
@@ -26,7 +26,7 @@ pub fn render(camera: Camera, world: Vec<BoxedSurface>) -> Vec<Rgb<u8>> {
         let world = &world;
         ch.into_iter().enumerate().for_each(move |(x, p)| {
             let camera = camera.clone();
-            *p = ray_color(x as f32, y as f32, &camera, &world);
+            *p = pixel_color(x as f32, y as f32, &camera, &world);
         });
     });
     println!("Rendering time: {}s", start.elapsed().as_secs());

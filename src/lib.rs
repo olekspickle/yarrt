@@ -12,15 +12,14 @@ use parallel::{ANTIALIASING, DEPTH, HEIGHT, WIDTH};
 use scene::Camera;
 
 /// Determine ray color
-pub fn ray_color(x: f32, y: f32, camera: &Camera, world: &Vec<BoxedSurface>) -> Rgb<u8> {
+pub fn pixel_color(x: f32, y: f32, camera: &Camera, world: &Vec<BoxedSurface>) -> Rgb<u8> {
     let mut col = Vec3::ZERO;
-    let mut rng = rand::thread_rng();
 
     for _ in 0..ANTIALIASING {
-        let rand = rng.gen_range(0.0..1.0);
-
+        let rand = || rand::thread_rng().gen_range(0.0..1.0);
+        
         // This two are pixel's relative coordinates on the screen
-        let (u, v) = (((x + rand) / WIDTH), ((y + rand) / HEIGHT));
+        let (u, v) = (((x + rand()) / WIDTH), ((y + rand()) / HEIGHT));
         let ray = camera.get_ray(u, v);
         col += ray.color(&world, DEPTH);
     }
@@ -72,7 +71,7 @@ impl Ray {
     pub fn color(&self, world: &Vec<BoxedSurface>, depth: i32) -> Vec3 {
         if let Some(hit) = world.hit(&self, 0.001, f32::MAX) {
             if let Some((attenuation, scattered)) = hit.material.scatter(self, &hit) {
-                let col: Vec3 = scattered.color(world, depth);
+                let col = scattered.color(world, depth);
                 return attenuation * col;
             }
         }

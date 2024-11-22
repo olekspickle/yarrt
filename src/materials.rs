@@ -8,14 +8,9 @@ use rand::Rng;
 /// 2. If the point outside of the spere - reject it and try again
 /// while we find the one that is inside of the sphere.
 pub fn rand_in_unit_sphere() -> Vec3 {
-    let mut rng = rand::thread_rng();
+    let rand = || rand::thread_rng().gen_range(-1.0..1.0);
     loop {
-        let p =
-            2.0 * Vec3::new(
-                rng.gen_range(-1.0..1.0),
-                rng.gen_range(-1.0..1.0),
-                rng.gen_range(-1.0..1.0),
-            ) - Vec3::ONE;
+        let p = 2.0 * Vec3::new(rand(), rand(), rand()) - Vec3::ONE;
         if p.length_squared() >= 1.0 {
             break p;
         }
@@ -116,6 +111,13 @@ impl Refractive {
         let r0 = r0 * r0;
         r0 + (1.0 - r0) * (1.0 - cosine).powi(5)
     }
+
+    // fn refract_vec(uv: Vec3, n: Vec3, etai_over_etat: f32) -> Vec3 {
+    //     let cos_theta = (-uv).dot(n).min(1.0);
+    //     let r_out_perp = etai_over_etat * (uv + (cos_theta * n));
+    //     let r_out_parallel = -(((1.0 - r_out_perp.length_squared()) as f32).abs().sqrt()) * n;
+    //     r_out_perp + r_out_parallel
+    // }
 }
 
 impl Material for Refractive {
@@ -136,10 +138,18 @@ impl Material for Refractive {
                 -ray.direction().dot(hit.normal) / ray.direction().length(),
             )
         };
-        let refracted = Self::refract(ray.direction(), outward_normal, refraction_ratio);
+
+        // // Borrowed solution from
+        // // https://github.com/ndhansen/raytracer/blob/main/src/scene/materials/dielectric.rs
+        // let unit_direction = ray.direction().unit_vec();
+        // let cos_theta = (-unit_direction).dot(hit.normal).min(1.0);
+        // let sin_theta = (1.0 - cos_theta.powi(2)).sqrt();
+        // let cannot_refract = refraction_ratio * sin_theta > 1.0;
+
         let attenuation = Vec3::splat(1.0);
-        let default_scattered = Ray::new(hit.p, reflected);
         let random = rand::thread_rng().gen_range(0.0..1.0);
+        let default_scattered = Ray::new(hit.p, reflected);
+        let refracted = Self::refract(ray.direction(), outward_normal, refraction_ratio);
         let prob = refracted
             .map(|_| Self::shlick(cosine, self.refractive_index))
             .unwrap_or(1.0);
@@ -149,8 +159,14 @@ impl Material for Refractive {
         } else {
             return Some((attenuation, Ray::new(hit.p, refracted)));
         }
-        // refracted
-        //     .map(|refracted| Some((attenuation, Ray::new(hit.p, refracted))))
-        //     .unwrap_or(Some((attenuation, Ray::new(hit.p, reflected))))
+
+        // let reflectance = Self::shlick(cos_theta, refraction_ratio);
+        // let direction = if cannot_refract || reflectance > random {
+        //     // eprintln!("reflected with {} vs {} random! (cannot_refract: {})", reflectance, random_double, cannot_refract);
+        //     Self::reflect(unit_direction, hit.normal)
+        // } else {
+        //     Self::refract_vec(unit_direction, hit.normal, refraction_ratio)
+        // };
+        // Some((attenuation, Ray::new(hit.p, direction)))
     }
 }
