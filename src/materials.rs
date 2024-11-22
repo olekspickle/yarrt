@@ -44,9 +44,9 @@ impl Material for Lambertian {
         let target = hit.p + hit.normal + rand_in_unit_sphere();
         let scattered = Ray::new(hit.p, target - hit.p);
         // We could as well introduce some probability for scatter
-        let p = rand::thread_rng().gen_range(0.1..0.99);
-        let attenuation = self.albedo / p;
-        // let attenuation = self.albedo;
+        // let p = rand::thread_rng().gen_range(0.1..0.99);
+        // let attenuation = self.albedo / p;
+        let attenuation = self.albedo;
         return Some((attenuation, scattered));
     }
 }

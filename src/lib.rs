@@ -69,9 +69,8 @@ pub struct Hit<'a> {
 }
 
 impl<'a> Hit<'a> {
-    pub fn new(t: f32, ray: &Ray, origin: Vec3, material: &'a dyn Material, visible: bool) -> Self {
+    pub fn new(t: f32, ray: &Ray, material: &'a dyn Material, normal: Vec3) -> Self {
         let p = ray.at(t);
-        let normal = if visible { p - origin } else { -p - origin };
 
         Self {
             t,

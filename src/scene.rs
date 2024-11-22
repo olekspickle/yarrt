@@ -37,14 +37,10 @@ impl Surface for Sphere {
             }
         }
 
-        let visible = ray.direction().dot(self.center) < 0.0;
-        Some(Hit::new(
-            root,
-            ray,
-            self.center,
-            &*self.material,
-            visible,
-        ))
+        let p = ray.at(root);
+        let normal = (p - self.center) / self.radius;
+
+        Some(Hit::new(root, ray, &*self.material, normal))
     }
 }
 
