@@ -1,6 +1,41 @@
 pub mod utils;
 
 use glam::Vec3;
+use rand::Rng;
+
+/// For ray calculate color in the given world - list of objects with coordinates
+pub fn color<T: Surface>(ray: &Ray, world: &List<T>) -> Vec3 {
+    let mut hit = Hit::default();
+    if world.hit(ray, 0.0001, f32::MAX, &mut hit) {
+        let target = hit.p + hit.normal + rand_in_unit_sphere();
+        let new_ray = Ray::new(hit.p, target - hit.p);
+        return 0.5 * color(&new_ray, world);
+    } else {
+        let norm = ray.direction().norm();
+        let t = 0.5 * norm.y + 1.0;
+        (1.0 - t) * Vec3::ONE + t * Vec3::new(0.5, 0.7, 1.0)
+    }
+}
+
+/// Pick a random point in unit radius sphere centered at the origin.
+/// We'll use the rejection algorithm:
+/// 1. Peak a random point in the unit cube where x,y and z all in range -1..1
+/// 2. If the point outside of the spere - reject it and try again
+/// while we find the one that is inside of the sphere.
+pub fn rand_in_unit_sphere() -> Vec3 {
+    let mut rng = rand::thread_rng();
+    loop {
+        let p =
+            2.0 * Vec3::new(
+                rng.gen_range(-1.0..1.0),
+                rng.gen_range(-1.0..1.0),
+                rng.gen_range(-1.0..1.0),
+            ) - Vec3::ONE;
+        if p.length_squared() >= 1.0 {
+            break p;
+        }
+    }
+}
 
 pub trait Vec3Ext<T> {
     /// Unit vector: v / v.length()
@@ -134,17 +169,6 @@ impl<T: Surface> Surface for List<T> {
         }
 
         hit_any
-    }
-}
-
-pub fn color<T: Surface>(ray: &Ray, world: &List<T>) -> Vec3 {
-    let mut hit = Hit::default();
-    if world.hit(ray, 0.0, f32::MAX, &mut hit) {
-        return 0.5 * Vec3::new(hit.normal.x + 1.0, hit.normal.y + 1.0, hit.normal.z + 1.0);
-    } else {
-        let norm = ray.direction().norm();
-        let t = 0.5 * norm.y + 1.0;
-        (1.0 - t) * Vec3::ONE + t * Vec3::new(0.5, 0.7, 1.0)
     }
 }
 

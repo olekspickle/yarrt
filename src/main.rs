@@ -11,11 +11,12 @@ use std::path::Path;
 const DIM: u32 = 200;
 
 fn main() {
+    let t = utils::Timer::new();
     let (w, h, ns) = (DIM as f32 * 2.0, DIM as f32, 100);
     let mut buf = ImageBuffer::new(w as u32, h as u32);
 
     let world = List::new(vec![
-        Sphere::new(Vec3::new(-0.2, 0.0, -1.0), 0.5),
+        Sphere::new(Vec3::new(0.0, 0.1, -1.0), 0.5),
         Sphere::new(Vec3::new(0.0, -100.5, -1.0), 100.0),
     ]);
     let camera = Camera::default();
@@ -34,7 +35,7 @@ fn main() {
         }
 
         col /= ns as f32;
-
+        col = Vec3::new(col.x.sqrt(), col.y.sqrt(), col.z.sqrt());
         *pixel = Rgb([
             (col[0] * 255.99) as u8,
             (col[1] * 255.99) as u8,
@@ -43,4 +44,5 @@ fn main() {
     }
 
     utils::save_image(buf, &Path::new("output/scene.png"));
+    t.end();
 }
