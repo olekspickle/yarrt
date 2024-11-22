@@ -36,7 +36,7 @@ fn world<'a>() -> Vec<Box<dyn Surface>> {
     )));
 
     world.push(Box::new(Sphere::new(
-        Vec3::new(-1.1, -0.05, -1.0),
+        Vec3::new(-1.1, -0.1, -1.0),
         0.4,
         refractive,
     )));
