@@ -22,11 +22,8 @@ pub fn rand_in_unit_sphere() -> Vec3 {
     }
 }
 
-/// In the book this is the abstract class, but if we make it a trait
-/// it will explode with generics all over the code. To follow KISS principle
-/// we'll make it enum, aggregating logic for all materials
 pub trait Material {
-    fn scatter(&self, r_in: &Ray, hit: &Hit, attenuation: &mut Vec3, scattered: &mut Ray) -> bool;
+    fn scatter(&self, ray: &Ray, hit: &Hit) -> Option<(Vec3, Ray)>;
 }
 
 /// Represent simple materials that neither reflect nor refract
@@ -43,14 +40,14 @@ impl Lambertian {
 }
 
 impl Material for Lambertian {
-    fn scatter(&self, _r_in: &Ray, hit: &Hit, attenuation: &mut Vec3, scattered: &mut Ray) -> bool {
+    fn scatter(&self, _: &Ray, hit: &Hit) -> Option<(Vec3, Ray)> {
         let target = hit.p + hit.normal + rand_in_unit_sphere();
-        *scattered = Ray::new(hit.p, target - hit.p);
+        let scattered = Ray::new(hit.p, target - hit.p);
         // We could as well introduce some probability for scatter
         // let p = rand::thread_rng().gen_range(0.1..0.99);
         // *attenuation = self.albedo / p;
-        *attenuation = self.albedo;
-        return true;
+        let attenuation = self.albedo;
+        return Some((attenuation, scattered));
     }
 }
 
@@ -71,13 +68,16 @@ impl Metal {
 }
 
 impl Material for Metal {
-    fn scatter(&self, r_in: &Ray, hit: &Hit, attenuation: &mut Vec3, scattered: &mut Ray) -> bool {
-        let reflected = Self::reflect(r_in.direction().norm(), hit.normal);
-        *scattered = Ray::new(hit.p, reflected);
+    fn scatter(&self, r_in: &Ray, hit: &Hit) -> Option<(Vec3, Ray)> {
+        let reflected = Self::reflect(r_in.direction().unit_vec(), hit.normal);
+        let scattered = Ray::new(hit.p, reflected);
         // We could as well introduce some probability for scatter
-        let p = rand::thread_rng().gen_range(0.1..0.99);
-        *attenuation = self.albedo / p;
-        // *attenuation = self.albedo;
-        return scattered.direction().dot(hit.normal) > 0.0;
+        // let p = rand::thread_rng().gen_range(0.1..0.99);
+        // *attenuation = self.albedo / p;
+        let attenuation = self.albedo;
+        if scattered.direction().dot(hit.normal) > 0.0 {
+            return Some((attenuation, scattered));
+        }
+        None
     }
 }
