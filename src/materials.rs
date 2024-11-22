@@ -112,6 +112,8 @@ impl Refractive {
 }
 
 impl Material for Refractive {
+    /// It's interesting that the following code overflows stack sometimes...
+    /// At least in my laptop.
     fn scatter(&self, r_in: &Ray, hit: &Hit) -> Option<(Vec3, Ray)> {
         let reflected = Self::reflect(r_in.direction().unit_vec(), hit.normal);
         let (outward_normal, ni_over_nt) = if r_in.direction().dot(hit.normal) > 0.0 {
@@ -128,7 +130,6 @@ impl Material for Refractive {
             // It's important to keep the expected behavior
             return Some((attenuation, Ray::new(hit.p, reflected)));
         }
-        // It's interesting that the following code overflows stack
         // refracted
         //     .map(|refracted| Some((attenuation, Ray::new(hit.p, refracted))))
         //     .unwrap_or(Some((attenuation, Ray::new(hit.p, reflected))))

@@ -92,7 +92,7 @@ impl Default for Camera {
             lower_left: Vec3::new(-2.0, 1.0, -1.0),
             horiz: Vec3::new(4.0, 0.0, 0.0),
             vert: Vec3::new(0.0, -2.0, 0.0),
-            origin: Vec3::ZERO,
+            origin: Vec3::new(-1.0, 0.5, 1.0),
         }
     }
 }

@@ -15,31 +15,32 @@ use std::path::Path;
 fn world<'a>() -> Vec<BoxedSurface> {
     let mut world: Vec<BoxedSurface> = vec![];
 
-    let diffuse1 = Box::new(Lambertian::new(Vec3::new(0.1, 0.2, 0.5)));
-    let diffuse2 = Box::new(Lambertian::new(Vec3::new(0.8, 0.8, 0.0)));
-    let reflective = Box::new(Reflective::new(Vec3::new(0.8, 0.6, 0.2)));
+    let diffuse = Box::new(Lambertian::new(Vec3::new(0.1, 0.2, 0.5)));
+    // let diffuse2 = Box::new(Lambertian::new(Vec3::new(0.8, 0.8, 0.0)));
+    let reflective1 = Box::new(Reflective::new(Vec3::new(0.8, 0.9, 0.6)));
+    let reflective2 = Box::new(Reflective::new(Vec3::new(0.8, 0.6, 0.2)));
     let refractive = Box::new(Refractive::new(1.5));
     // Plane
     world.push(Box::new(Sphere::new(
         Vec3::new(0.0, -100.5, -1.0),
         100.0,
-        diffuse2,
+        reflective1,
     )));
 
     world.push(Box::new(Sphere::new(
-        Vec3::new(-1.0, -0.1, -1.0),
-        0.4,
+        Vec3::new(-1.0, 0.0, -1.0),
+        0.3,
         refractive,
     )));
     world.push(Box::new(Sphere::new(
         Vec3::new(-0.2, 0.0, -2.0),
         0.5,
-        diffuse1,
+        diffuse,
     )));
     world.push(Box::new(Sphere::new(
         Vec3::new(0.8, 0.0, -1.0),
         0.4,
-        reflective,
+        reflective2,
     )));
 
     world

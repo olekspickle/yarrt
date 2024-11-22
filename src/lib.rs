@@ -11,7 +11,7 @@ use materials::BoxedMaterial;
 use parallel::{ANTIALIASING, DEPTH, HEIGHT, WIDTH};
 use scene::Camera;
 
-///
+/// Determine ray color
 pub fn ray_color(x: f32, y: f32, camera: &Camera, world: &Vec<BoxedSurface>) -> Rgb<u8> {
     let mut col = Vec3::ZERO;
     let mut rng = rand::thread_rng();
