@@ -4,12 +4,19 @@ use glam::Vec3;
 use rand::Rng;
 
 /// For ray calculate color in the given world - list of objects with coordinates
-pub fn color<T: Surface>(ray: &Ray, world: &List<T>) -> Vec3 {
+pub fn color<T: Surface>(ray: &Ray, world: &List<T>, depth: i32) -> Vec3 {
     let mut hit = Hit::default();
     if world.hit(ray, 0.0001, f32::MAX, &mut hit) {
-        let target = hit.p + hit.normal + rand_in_unit_sphere();
-        let new_ray = Ray::new(hit.p, target - hit.p);
-        return 0.5 * color(&new_ray, world);
+        let mut scattered = Ray::new(Vec3::ZERO, Vec3::ONE);
+        let mut attenuation: Vec3 = Vec3::ZERO;
+        if depth < 50
+            && hit
+                .material
+                .scatter(ray, &hit, &mut attenuation, &mut scattered)
+        {
+            return attenuation * color(&scattered, world, depth + 1);
+        }
+        Vec3::ZERO
     } else {
         let norm = ray.direction().norm();
         let t = 0.5 * norm.y + 1.0;
@@ -81,6 +88,7 @@ pub struct Hit {
     /// 3D position on the line
     pub p: Vec3,
     pub normal: Vec3,
+    pub material: Material,
 }
 
 impl Hit {
@@ -107,16 +115,22 @@ pub trait Surface {
 pub struct Sphere {
     center: Vec3,
     radius: f32,
+    material: Material,
 }
 
 impl Sphere {
-    pub fn new(center: Vec3, radius: f32) -> Self {
-        Sphere { center, radius }
+    pub fn new(center: Vec3, radius: f32, material: Material) -> Self {
+        Sphere {
+            center,
+            radius,
+            material,
+        }
     }
     pub fn new_unit() -> Self {
         Sphere {
             center: Vec3::ONE,
             radius: 5.0,
+            material: Default::default(),
         }
     }
 }
@@ -199,5 +213,79 @@ impl Default for Camera {
             vert: Vec3::new(0.0, -2.0, 0.0),
             origin: Vec3::ZERO,
         }
+    }
+}
+
+/// In the book this is the abstract class, but if we make it a trait
+/// it will explode with generics all over the code. To follow KISS principle
+/// we'll make it enum, aggregating logic for all materials
+#[derive(Clone)]
+pub enum Material {
+    /// Represent simple materials that neither reflect nor refract
+    /// light rays
+    Diffuse(Lambertian),
+
+    /// Represent reflective surfaces that reflect rays
+    Reflective(Metal),
+}
+
+impl Material {
+    fn scatter(&self, r_in: &Ray, hit: &Hit, attenuation: &mut Vec3, scattered: &mut Ray) -> bool {
+        match self {
+            Self::Diffuse(l) => l.scatter(r_in, hit, attenuation, scattered),
+            Self::Reflective(m) => m.scatter(r_in, hit, attenuation, scattered),
+        }
+    }
+}
+
+impl Default for Material {
+    fn default() -> Self {
+        Material::Diffuse(Lambertian::new(Vec3::ONE))
+    }
+}
+
+#[derive(Clone)]
+pub struct Lambertian {
+    albedo: Vec3,
+}
+
+impl Lambertian {
+    pub fn new(albedo: Vec3) -> Self {
+        Self { albedo }
+    }
+
+    fn scatter(&self, r_in: &Ray, hit: &Hit, attenuation: &mut Vec3, scattered: &mut Ray) -> bool {
+        let target = hit.p + hit.normal + rand_in_unit_sphere();
+        *scattered = Ray::new(hit.p, target - hit.p);
+        // We could as well introduce some probability for scatter
+        // let p = rand::thread_rng().gen_range(0.1..0.99);
+        // *attenuation = self.albedo / p;
+        *attenuation = self.albedo;
+        return true;
+    }
+}
+
+#[derive(Clone)]
+pub struct Metal {
+    albedo: Vec3,
+}
+
+impl Metal {
+    pub fn new(albedo: Vec3) -> Self {
+        Self { albedo }
+    }
+
+    fn scatter(&self, r_in: &Ray, hit: &Hit, attenuation: &mut Vec3, scattered: &mut Ray) -> bool {
+        let reflected = Self::reflect(r_in.direction().norm(), hit.normal);
+        *scattered = Ray::new(hit.p, reflected);
+        // We could as well introduce some probability for scatter
+        // let p = rand::thread_rng().gen_range(0.1..0.99);
+        // *attenuation = self.albedo / p;
+        *attenuation = self.albedo;
+        return true;
+    }
+
+    fn reflect(v: Vec3, n: Vec3) -> Vec3 {
+        v - 2.0 * v.dot(n) * n
     }
 }
