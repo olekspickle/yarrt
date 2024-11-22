@@ -5,39 +5,57 @@
 use glam::Vec3;
 use image::{ImageBuffer, Rgb};
 use rand::Rng;
-use rt_in_1_weekend::{color, utils, Camera, Lambertian, List, Material, Metal, Sphere};
+use rt_in_1_weekend::{
+    color,
+    materials::{Lambertian, Metal},
+    utils, Camera, Sphere, Surface,
+};
 use std::path::Path;
 
 const DIM: u32 = 200;
+const DEPTH: i32 = 10;
+
+fn world<'a>() -> Vec<Box<dyn Surface>> {
+    let mut world: Vec<Box<dyn Surface>> = vec![];
+
+    let diffuse1 = Box::new(Lambertian::new(Vec3::new(0.8, 0.3, 0.3)));
+    let diffuse2 = Box::new(Lambertian::new(Vec3::new(0.8, 0.0, 0.8)));
+    let reflective1 = Box::new(Metal::new(Vec3::new(0.8, 0.6, 0.2)));
+    let reflective2 = Box::new(Metal::new(Vec3::new(0.8, 0.8, 0.8)));
+    world.push(Box::new(Sphere::new(
+        Vec3::new(0.0, 0.1, -1.0),
+        0.5,
+        diffuse1,
+    )));
+
+    world.push(Box::new(Sphere::new(
+        Vec3::new(0.0, -100.5, -1.0),
+        100.0,
+        diffuse2,
+    )));
+
+    world.push(Box::new(Sphere::new(
+        Vec3::new(1.0, 0.0, -1.0),
+        0.2,
+        reflective1,
+    )));
+    world.push(Box::new(Sphere::new(
+        Vec3::new(-1.0, 0.0, -1.0),
+        0.2,
+        reflective2,
+    )));
+
+    world
+}
 
 fn main() {
     let t = utils::Timer::new();
     let (w, h, ns) = (DIM as f32 * 2.0, DIM as f32, 100);
     let mut buf = ImageBuffer::new(w as u32, h as u32);
 
-    let world = List::new(vec![
-        Sphere::new(
-            Vec3::new(0.0, 0.1, -1.0),
-            0.5,
-            Material::Diffuse(Lambertian::new(Vec3::new(0.8, 0.3, 0.3))),
-        ),
-        Sphere::new(
-            Vec3::new(0.0, -100.5, -1.0),
-            100.0,
-            Material::Diffuse(Lambertian::new(Vec3::new(0.8, 0.8, 0.0))),
-        ),
-        Sphere::new(
-            Vec3::new(1.0, 0.0, -1.0),
-            0.5,
-            Material::Reflective(Metal::new(Vec3::new(0.8, 0.6, 0.2))),
-        ),
-        Sphere::new(
-            Vec3::new(-1.0, 0.0, -1.0),
-            0.5,
-            Material::Reflective(Metal::new(Vec3::new(0.8, 0.8, 0.8))),
-        ),
-    ]);
+    let world: Vec<Box<dyn Surface>> = world();
     let camera = Camera::default();
+
     for (x, y, pixel) in buf.enumerate_pixels_mut() {
         let mut col = Vec3::ZERO;
         let (x, y) = (x as f32, y as f32);
@@ -49,7 +67,7 @@ fn main() {
             let (u, v) = (((x + rand) / w), ((y + rand) / h));
             let ray = camera.get_ray(u, v);
             // let p = ray.point_at(2.0);
-            col += color(&ray, &world, 2);
+            col += color(&ray, &world, DEPTH);
         }
 
         col /= ns as f32;

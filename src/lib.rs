@@ -1,47 +1,27 @@
+pub mod materials;
 pub mod utils;
 
 use glam::Vec3;
-use rand::Rng;
+use materials::Material;
 
 /// For ray calculate color in the given world - list of objects with coordinates
-pub fn color<T: Surface>(ray: &Ray, world: &List<T>, depth: i32) -> Vec3 {
-    let mut hit = Hit::default();
-    if world.hit(ray, 0.0001, f32::MAX, &mut hit) {
-        let mut scattered = Ray::new(Vec3::ZERO, Vec3::ONE);
+pub fn color(ray: &Ray, world: &Vec<Box<dyn Surface>>, depth: i32) -> Vec3 {
+    if let Some(hit) = world.hit(ray, 0.0001, f32::MAX) {
+        let mut scattered = Ray::new(Vec3::ZERO, Vec3::splat(0.2));
         let mut attenuation: Vec3 = Vec3::ZERO;
         if depth < 50
             && hit
                 .material
                 .scatter(ray, &hit, &mut attenuation, &mut scattered)
         {
-            return attenuation * color(&scattered, world, depth + 1);
+            let col: Vec3 = color(&scattered, world, depth + 1);
+            return attenuation * col;
         }
-        Vec3::ZERO
-    } else {
-        let norm = ray.direction().norm();
-        let t = 0.5 * norm.y + 1.0;
-        (1.0 - t) * Vec3::ONE + t * Vec3::new(0.5, 0.7, 1.0)
     }
-}
 
-/// Pick a random point in unit radius sphere centered at the origin.
-/// We'll use the rejection algorithm:
-/// 1. Peak a random point in the unit cube where x,y and z all in range -1..1
-/// 2. If the point outside of the spere - reject it and try again
-/// while we find the one that is inside of the sphere.
-pub fn rand_in_unit_sphere() -> Vec3 {
-    let mut rng = rand::thread_rng();
-    loop {
-        let p =
-            2.0 * Vec3::new(
-                rng.gen_range(-1.0..1.0),
-                rng.gen_range(-1.0..1.0),
-                rng.gen_range(-1.0..1.0),
-            ) - Vec3::ONE;
-        if p.length_squared() >= 1.0 {
-            break p;
-        }
-    }
+    let norm = ray.direction().norm();
+    let t = 0.5 * norm.y + 1.0;
+    (1.0 - t) * Vec3::ONE + t * Vec3::new(0.5, 0.7, 1.0)
 }
 
 pub trait Vec3Ext<T> {
@@ -78,8 +58,8 @@ impl Ray {
     }
 }
 
-#[derive(Default, Clone)]
-pub struct Hit {
+#[derive(Clone)]
+pub struct Hit<'a> {
     /// Ray parameter. Real number on a line AB, where
     /// A - ray origin
     /// B - ray direction:Surface
@@ -87,56 +67,45 @@ pub struct Hit {
     pub t: f32,
     /// 3D position on the line
     pub p: Vec3,
+    /// Normal of the surface
     pub normal: Vec3,
-    pub material: Material,
+    pub material: &'a dyn Material,
 }
 
-impl Hit {
-    pub fn update(&mut self, t: f32, ray: &Ray, origin: Vec3) {
-        self.set_t(t);
-        self.set_p(ray.point_at(self.t));
-        self.set_normal(self.p - origin);
-    }
-    pub fn set_t(&mut self, t: f32) {
-        self.t = t;
-    }
-    pub fn set_p(&mut self, p: Vec3) {
-        self.p = p;
-    }
-    pub fn set_normal(&mut self, normal: Vec3) {
-        self.normal = normal;
+impl<'a> Hit<'a> {
+    pub fn new(t: f32, ray: &Ray, origin: Vec3, material: &'a dyn Material) -> Self {
+        let p = ray.point_at(t);
+        Self {
+            t,
+            p,
+            normal: p - origin,
+            material,
+        }
     }
 }
 
 pub trait Surface {
-    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32, hit: &mut Hit) -> bool;
+    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<Hit>;
 }
 
 pub struct Sphere {
     center: Vec3,
     radius: f32,
-    material: Material,
+    material: Box<dyn Material>,
 }
 
 impl Sphere {
-    pub fn new(center: Vec3, radius: f32, material: Material) -> Self {
+    pub fn new(center: Vec3, radius: f32, material: Box<dyn Material>) -> Self {
         Sphere {
             center,
             radius,
             material,
         }
     }
-    pub fn new_unit() -> Self {
-        Sphere {
-            center: Vec3::ONE,
-            radius: 5.0,
-            material: Default::default(),
-        }
-    }
 }
 
 impl Surface for Sphere {
-    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32, hit: &mut Hit) -> bool {
+    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<Hit> {
         let oc: Vec3 = ray.origin() - self.center;
         let a = ray.direction().dot(ray.direction());
         let b = oc.dot(ray.direction());
@@ -145,44 +114,29 @@ impl Surface for Sphere {
         if discriminant > 0.0 {
             let temp = (-b - discriminant.sqrt()) / a;
             if temp < t_max && temp > t_min {
-                hit.update(temp, ray, self.center);
-                return true;
+                return Some(Hit::new(temp, ray, self.center, &*self.material));
             }
             let temp = (-b + discriminant.sqrt()) / a;
             if temp < t_max && temp > t_min {
-                hit.update(temp, ray, self.center);
-                return true;
+                return Some(Hit::new(temp, ray, self.center, &*self.material));
             }
         }
-        false
+        None
     }
 }
 
-pub struct List<T: Surface> {
-    pub list: Vec<T>,
-}
-
-impl<T: Surface> List<T> {
-    pub fn new(list: Vec<T>) -> Self {
-        Self { list }
-    }
-}
-
-impl<T: Surface> Surface for List<T> {
-    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32, hit: &mut Hit) -> bool {
-        let mut temp_hit = Hit::default();
-        let mut hit_any = false;
+impl Surface for Vec<Box<dyn Surface>> {
+    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<Hit> {
+        let mut temp_hit = None;
         let mut closest_so_far = t_max;
-        for surface in self.list.iter() {
-            let t = temp_hit.t;
-            if surface.hit(ray, t_min, closest_so_far, &mut temp_hit) {
-                hit_any = true;
-                closest_so_far = t;
-                *hit = temp_hit.clone();
+        for surface in self.iter() {
+            if let Some(hit) = surface.hit(ray, t_min, closest_so_far) {
+                closest_so_far = hit.t;
+                temp_hit = Some(hit);
             }
         }
 
-        hit_any
+        temp_hit
     }
 }
 
@@ -213,79 +167,5 @@ impl Default for Camera {
             vert: Vec3::new(0.0, -2.0, 0.0),
             origin: Vec3::ZERO,
         }
-    }
-}
-
-/// In the book this is the abstract class, but if we make it a trait
-/// it will explode with generics all over the code. To follow KISS principle
-/// we'll make it enum, aggregating logic for all materials
-#[derive(Clone)]
-pub enum Material {
-    /// Represent simple materials that neither reflect nor refract
-    /// light rays
-    Diffuse(Lambertian),
-
-    /// Represent reflective surfaces that reflect rays
-    Reflective(Metal),
-}
-
-impl Material {
-    fn scatter(&self, r_in: &Ray, hit: &Hit, attenuation: &mut Vec3, scattered: &mut Ray) -> bool {
-        match self {
-            Self::Diffuse(l) => l.scatter(r_in, hit, attenuation, scattered),
-            Self::Reflective(m) => m.scatter(r_in, hit, attenuation, scattered),
-        }
-    }
-}
-
-impl Default for Material {
-    fn default() -> Self {
-        Material::Diffuse(Lambertian::new(Vec3::ONE))
-    }
-}
-
-#[derive(Clone)]
-pub struct Lambertian {
-    albedo: Vec3,
-}
-
-impl Lambertian {
-    pub fn new(albedo: Vec3) -> Self {
-        Self { albedo }
-    }
-
-    fn scatter(&self, r_in: &Ray, hit: &Hit, attenuation: &mut Vec3, scattered: &mut Ray) -> bool {
-        let target = hit.p + hit.normal + rand_in_unit_sphere();
-        *scattered = Ray::new(hit.p, target - hit.p);
-        // We could as well introduce some probability for scatter
-        // let p = rand::thread_rng().gen_range(0.1..0.99);
-        // *attenuation = self.albedo / p;
-        *attenuation = self.albedo;
-        return true;
-    }
-}
-
-#[derive(Clone)]
-pub struct Metal {
-    albedo: Vec3,
-}
-
-impl Metal {
-    pub fn new(albedo: Vec3) -> Self {
-        Self { albedo }
-    }
-
-    fn scatter(&self, r_in: &Ray, hit: &Hit, attenuation: &mut Vec3, scattered: &mut Ray) -> bool {
-        let reflected = Self::reflect(r_in.direction().norm(), hit.normal);
-        *scattered = Ray::new(hit.p, reflected);
-        // We could as well introduce some probability for scatter
-        // let p = rand::thread_rng().gen_range(0.1..0.99);
-        // *attenuation = self.albedo / p;
-        *attenuation = self.albedo;
-        return true;
-    }
-
-    fn reflect(v: Vec3, n: Vec3) -> Vec3 {
-        v - 2.0 * v.dot(n) * n
     }
 }
