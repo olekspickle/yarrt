@@ -36,14 +36,14 @@ fn world<'a>() -> Vec<Box<dyn Surface>> {
     )));
 
     world.push(Box::new(Sphere::new(
-        Vec3::new(1.0, 0.2, -1.0),
-        0.3,
-        reflective1,
+        Vec3::new(-1.1, 0.1, -1.0),
+        0.4,
+        reflective2,
     )));
     world.push(Box::new(Sphere::new(
-        Vec3::new(-1.0, 0.2, -1.0),
-        0.3,
-        reflective2,
+        Vec3::new(1.1, 0.1, -1.0),
+        0.4,
+        reflective1,
     )));
 
     world

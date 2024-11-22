@@ -29,31 +29,22 @@ impl Surface for Sphere {
         }
 
         let d_root = discriminant.sqrt();
-        if discriminant > 0.0 {
-            let root = (-b - d_root) / a;
-            if root < t_max && root > t_min {
-                let face_normal = ray.direction().dot(self.center) < 0.0;
-                return Some(Hit::new(
-                    root,
-                    ray,
-                    self.center,
-                    &*self.material,
-                    face_normal,
-                ));
-            }
-            let root = (-b + d_root) / a;
-            if root < t_max && root > t_min {
-                let face_normal = ray.direction().dot(self.center) < 0.0;
-                return Some(Hit::new(
-                    root,
-                    ray,
-                    self.center,
-                    &*self.material,
-                    face_normal,
-                ));
+        let mut root = (-b - d_root) / a;
+        if root > t_max || root < t_min {
+            root = (-b + d_root) / a;
+            if root > t_max || root < t_min {
+                return None;
             }
         }
-        None
+
+        let visible = ray.direction().dot(self.center) < 0.0;
+        Some(Hit::new(
+            root,
+            ray,
+            self.center,
+            &*self.material,
+            visible,
+        ))
     }
 }
 

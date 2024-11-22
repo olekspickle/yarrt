@@ -48,7 +48,8 @@ impl Ray {
         self.b
     }
 
-    pub fn point_at(&self, t: f32) -> Vec3 {
+    /// Return ray in point t
+    pub fn at(&self, t: f32) -> Vec3 {
         self.a + t * self.b
     }
 }
@@ -68,15 +69,9 @@ pub struct Hit<'a> {
 }
 
 impl<'a> Hit<'a> {
-    pub fn new(
-        t: f32,
-        ray: &Ray,
-        origin: Vec3,
-        material: &'a dyn Material,
-        face_normal: bool,
-    ) -> Self {
-        let p = ray.point_at(t);
-        let normal = if face_normal { -p - origin } else { p - origin };
+    pub fn new(t: f32, ray: &Ray, origin: Vec3, material: &'a dyn Material, visible: bool) -> Self {
+        let p = ray.at(t);
+        let normal = if visible { p - origin } else { -p - origin };
 
         Self {
             t,
