@@ -517,6 +517,7 @@ dependencies = [
  "glam",
  "image",
  "rand",
+ "rayon",
  "termion",
 ]
 

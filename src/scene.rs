@@ -1,6 +1,13 @@
 use crate::{materials::Material, Hit, Ray, Surface};
 use glam::Vec3;
 
+pub struct Scene {
+    pub width: u32,
+    pub height: u32,
+    pub world: Vec<Box<dyn Surface>>,
+    pub camera: Camera,
+}
+
 pub struct Sphere {
     center: Vec3,
     radius: f32,

@@ -54,11 +54,8 @@ impl Image {
         &mut self.0
     }
 
-    pub fn assign_pixel(&mut self, x: i32, y: i32, intensity: f32) {
+    pub fn assign_pixel(&mut self, x: i32, y: i32, value: Rgb<u8>) {
         let pixel = self.buf_mut().get_pixel_mut(x as u32, y as u32);
-        // Reverse to make black default value
-        // TODO: support different colors
-        let value = (255.0 - intensity * 255.0) as u8;
-        *pixel = Rgb([value; 3]);
+        *pixel = value;
     }
 }

@@ -1,13 +1,21 @@
 pub mod materials;
+pub mod parallel;
 pub mod scene;
 pub mod utils;
 
 use glam::Vec3;
+use image::Rgb;
+use rand::Rng;
+
 use materials::Material;
+use parallel::{HEIGHT, RNG, WIDTH};
+use scene::Camera;
+
+const ANTIALIASING: i32 = 50;
 
 /// For ray calculate color in the given world - list of objects with coordinates
 pub fn color(ray: &Ray, world: &Vec<Box<dyn Surface>>, depth: i32) -> Vec3 {
-    if let Some(hit) = world.hit(ray, 0.0001, f32::MAX) {
+    if let Some(hit) = world.hit(ray, 0.001, f32::MAX) {
         if let Some((attenuation, scattered)) = hit.material.scatter(ray, &hit) {
             let col: Vec3 = color(&scattered, world, depth + 1);
             return attenuation * col;
@@ -17,6 +25,42 @@ pub fn color(ray: &Ray, world: &Vec<Box<dyn Surface>>, depth: i32) -> Vec3 {
     let norm = ray.direction().unit_vec();
     let t = 0.5 * norm.y + 1.0;
     (1.0 - t) * Vec3::ONE + t * Vec3::new(0.5, 0.7, 1.0)
+}
+
+pub fn pixel_color(x: f32, y: f32, camera: &Camera, world: &Vec<dyn Surface>) -> Rgb<u8> {
+    for _ in 0..ANTIALIASING {
+        let rand = RNG.get_mut().gen_range(0.0..1.0);
+
+        // This two are pixel's relative coordinates on the screen
+        let (u, v) = (((x + rand) / WIDTH), ((y + rand) / HEIGHT));
+        let ray = camera.get_ray(u, v);
+        // let p = ray.point_at(2.0);
+        col += color(&ray, &world, DEPTH);
+    }
+
+    col /= ns as f32;
+    col = Vec3::new(col.x.sqrt(), col.y.sqrt(), col.z.sqrt());
+    Rgb([
+        (col[0] * 255.99) as u8,
+        (col[1] * 255.99) as u8,
+        (col[2] * 255.99) as u8,
+    ])
+}
+
+pub fn set_pixel(x: f32, y: f32, pixel: &mut Rgb<u8>) {
+    let mut col = Vec3::ZERO;
+    let pool = rayon::ThreadPoolBuilder::new().build().unwrap();
+    // let chunks =
+    let mut v1 = RawImageView::new(&mut buf, 0, 0, 10, 10);
+    let mut v2 = RawImageView::new(&mut buf, 10, 0, 10, 10);
+    pool.scope(|s| {
+        s.spawn(|_| {
+            modify(&mut v1);
+        });
+        s.spawn(|_| {
+            modify(&mut v2);
+        });
+    });
 }
 
 pub trait Vec3Ext<T> {
