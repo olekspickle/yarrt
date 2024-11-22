@@ -109,6 +109,12 @@ impl Refractive {
         }
         None
     }
+
+    fn shlick(cosine: f32, ref_idx: f32) -> f32 {
+        let r0 = (1.0 - ref_idx) / (1.0 + ref_idx);
+        let r0 = r0 * r0;
+        r0 + (1.0 - r0) * (1.0 - cosine).powi(5)
+    }
 }
 
 impl Material for Refractive {
@@ -126,7 +132,7 @@ impl Material for Refractive {
         if let Some(refracted) = refracted {
             return Some((attenuation, Ray::new(hit.p, refracted)));
         } else {
-            // In this branch Peter returns false. 
+            // In this branch Peter returns false.
             // It's important to keep the expected behavior
             return Some((attenuation, Ray::new(hit.p, reflected)));
         }
