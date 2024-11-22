@@ -7,7 +7,7 @@ use image::{ImageBuffer, Rgb};
 use rand::Rng;
 use rt_in_1_weekend::{
     color,
-    materials::{Lambertian, Metal},
+    materials::{Lambertian, Reflective, Refractive},
     scene::{Camera, Sphere},
     utils, Surface,
 };
@@ -19,12 +19,12 @@ const DEPTH: i32 = 10;
 fn world<'a>() -> Vec<Box<dyn Surface>> {
     let mut world: Vec<Box<dyn Surface>> = vec![];
 
-    let diffuse1 = Box::new(Lambertian::new(Vec3::new(0.8, 0.3, 0.3)));
+    let diffuse1 = Box::new(Lambertian::new(Vec3::new(0.1, 0.2, 0.5)));
     let diffuse2 = Box::new(Lambertian::new(Vec3::new(0.8, 0.8, 0.0)));
-    let reflective1 = Box::new(Metal::new(Vec3::new(0.8, 0.6, 0.2)));
-    let reflective2 = Box::new(Metal::new(Vec3::new(0.8, 0.8, 0.8)));
+    let reflective1 = Box::new(Reflective::new(Vec3::new(0.8, 0.6, 0.2)));
+    let refractive = Box::new(Refractive::new(1.5));
     world.push(Box::new(Sphere::new(
-        Vec3::new(0.0, 0.1, -1.0),
+        Vec3::new(0.0, 0.0, -1.0),
         0.5,
         diffuse1,
     )));
@@ -36,12 +36,12 @@ fn world<'a>() -> Vec<Box<dyn Surface>> {
     )));
 
     world.push(Box::new(Sphere::new(
-        Vec3::new(-1.1, 0.1, -1.0),
+        Vec3::new(-1.1, -0.05, -1.0),
         0.4,
-        reflective2,
+        refractive,
     )));
     world.push(Box::new(Sphere::new(
-        Vec3::new(1.1, 0.1, -1.0),
+        Vec3::new(1.1, 0.0, -1.0),
         0.4,
         reflective1,
     )));

@@ -53,11 +53,11 @@ impl Material for Lambertian {
 
 /// Represent reflective surfaces that reflect rays
 #[derive(Clone)]
-pub struct Metal {
+pub struct Reflective {
     albedo: Vec3,
 }
 
-impl Metal {
+impl Reflective {
     pub fn new(albedo: Vec3) -> Self {
         Self { albedo }
     }
@@ -67,7 +67,7 @@ impl Metal {
     }
 }
 
-impl Material for Metal {
+impl Material for Reflective {
     fn scatter(&self, r_in: &Ray, hit: &Hit) -> Option<(Vec3, Ray)> {
         let reflected = Self::reflect(r_in.direction().unit_vec(), hit.normal);
         let scattered = Ray::new(hit.p, reflected);
@@ -79,5 +79,54 @@ impl Material for Metal {
             return Some((attenuation, scattered));
         }
         None
+    }
+}
+
+/// Represent refractive materials that change rays angles
+/// I don't know why it was called dielectric...
+/// FWIW water is definitely not dielectric.
+#[derive(Clone)]
+pub struct Refractive {
+    refractive_index: f32,
+}
+
+impl Refractive {
+    pub fn new(refractive_index: f32) -> Self {
+        Self { refractive_index }
+    }
+
+    fn reflect(v: Vec3, n: Vec3) -> Vec3 {
+        v - 2.0 * v.dot(n) * n
+    }
+
+    fn refract(uv: Vec3, n: Vec3, ni_over_nt: f32) -> Option<Vec3> {
+        let dot = uv.dot(n);
+        let discriminant = 1.0 - ni_over_nt.powi(2) * (1.0 - dot * dot);
+        if discriminant > 0.0 {
+            return Some(ni_over_nt * (uv - n * dot) - n * discriminant.sqrt());
+        }
+        None
+    }
+}
+
+impl Material for Refractive {
+    fn scatter(&self, r_in: &Ray, hit: &Hit) -> Option<(Vec3, Ray)> {
+        let reflected = Self::reflect(r_in.direction().unit_vec(), hit.normal);
+        let (outward_normal, ni_over_nt) = if r_in.direction().dot(hit.normal) > 0.0 {
+            (-hit.normal, self.refractive_index)
+        } else {
+            (hit.normal, 1.0 / self.refractive_index)
+        };
+        let refracted = Self::refract(r_in.direction(), outward_normal, ni_over_nt);
+        let attenuation = Vec3::new(1.0, 1.0, 1.0);
+        // It's ineteresting that the following code overflows stack
+        // refracted
+        //     .map(|refracted| Some((attenuation, Ray::new(hit.p, refracted))))
+        //     .unwrap_or(Some((attenuation, Ray::new(hit.p, reflected))))
+        if let Some(refracted) = refracted {
+            return Some((attenuation, Ray::new(hit.p, refracted)));
+        } else {
+            return Some((attenuation, Ray::new(hit.p, reflected)));
+        }
     }
 }
