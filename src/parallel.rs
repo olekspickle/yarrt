@@ -12,8 +12,9 @@ pub const DEPTH: i32 = 3;
 /// The heavy lifting starts here.
 /// This function allocates with size exactly if images pixels
 /// to process them in chunks, here - lines(because chunk_size is
-/// one line of pixels). This does improve render time in my laptop 4x,
-/// but not solving stack overflow situation.
+/// one line of pixels). This does improve render time by the core count
+/// (in my laptop it is 4x) but not solving stack overflows
+/// caused by refractive materials ray bounces.
 pub fn render(camera: Camera, world: Vec<BoxedSurface>) -> Vec<Rgb<u8>> {
     let (w, h) = (WIDTH as usize, HEIGHT as usize);
 
@@ -28,6 +29,6 @@ pub fn render(camera: Camera, world: Vec<BoxedSurface>) -> Vec<Rgb<u8>> {
             *p = ray_color(x as f32, y as f32, &camera, &world);
         });
     });
-    println!("Rendering time:{} s", start.elapsed().as_secs());
+    println!("Rendering time: {}s", start.elapsed().as_secs());
     pixels
 }

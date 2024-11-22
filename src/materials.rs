@@ -121,14 +121,16 @@ impl Material for Refractive {
         };
         let refracted = Self::refract(r_in.direction(), outward_normal, ni_over_nt);
         let attenuation = Vec3::new(1.0, 1.0, 1.0);
-        // It's ineteresting that the following code overflows stack
-        // refracted
-        //     .map(|refracted| Some((attenuation, Ray::new(hit.p, refracted))))
-        //     .unwrap_or(Some((attenuation, Ray::new(hit.p, reflected))))
         if let Some(refracted) = refracted {
             return Some((attenuation, Ray::new(hit.p, refracted)));
         } else {
+            // In this branch Peter returns false. 
+            // It's important to keep the expected behavior
             return Some((attenuation, Ray::new(hit.p, reflected)));
         }
+        // It's interesting that the following code overflows stack
+        // refracted
+        //     .map(|refracted| Some((attenuation, Ray::new(hit.p, refracted))))
+        //     .unwrap_or(Some((attenuation, Ray::new(hit.p, reflected))))
     }
 }

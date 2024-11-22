@@ -3,7 +3,7 @@
 //!
 
 use glam::Vec3;
-use image::{ ImageBuffer, ImageEncoder, Rgb};
+use image::ImageBuffer;
 use rt_in_1_weekend::{
     materials::{Lambertian, Reflective, Refractive},
     parallel::{self, HEIGHT, WIDTH},
@@ -19,12 +19,7 @@ fn world<'a>() -> Vec<BoxedSurface> {
     let diffuse2 = Box::new(Lambertian::new(Vec3::new(0.8, 0.8, 0.0)));
     let reflective = Box::new(Reflective::new(Vec3::new(0.8, 0.6, 0.2)));
     let refractive = Box::new(Refractive::new(1.5));
-    world.push(Box::new(Sphere::new(
-        Vec3::new(0.0, 0.0, -1.0),
-        0.5,
-        diffuse1,
-    )));
-
+    // Plane
     world.push(Box::new(Sphere::new(
         Vec3::new(0.0, -100.5, -1.0),
         100.0,
@@ -32,13 +27,17 @@ fn world<'a>() -> Vec<BoxedSurface> {
     )));
 
     world.push(Box::new(Sphere::new(
-        Vec3::new(-1.1, -0.1, -1.0),
+        Vec3::new(-1.0, -0.1, -1.0),
         0.4,
-        // reflective.clone(),
         refractive,
     )));
     world.push(Box::new(Sphere::new(
-        Vec3::new(1.1, 0.0, -1.0),
+        Vec3::new(-0.2, 0.0, -2.0),
+        0.5,
+        diffuse1,
+    )));
+    world.push(Box::new(Sphere::new(
+        Vec3::new(0.8, 0.0, -1.0),
         0.4,
         reflective,
     )));

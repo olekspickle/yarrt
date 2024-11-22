@@ -72,7 +72,7 @@ impl Ray {
     pub fn color(&self, world: &Vec<BoxedSurface>, depth: i32) -> Vec3 {
         if let Some(hit) = world.hit(&self, 0.001, f32::MAX) {
             if let Some((attenuation, scattered)) = hit.material.scatter(self, &hit) {
-                let col: Vec3 = scattered.color(world, depth + 1);
+                let col: Vec3 = scattered.color(world, depth);
                 return attenuation * col;
             }
         }
@@ -115,5 +115,3 @@ pub trait Surface {
 }
 
 pub type BoxedSurface = Box<dyn Surface + Sync + Send + 'static>;
-
-// unsafe impl std::marker::Sync for Box<dyn Surface> {}
