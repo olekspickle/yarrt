@@ -32,11 +32,25 @@ impl Surface for Sphere {
         if discriminant > 0.0 {
             let root = (-b - d_root) / a;
             if root < t_max && root > t_min {
-                return Some(Hit::new(root, ray, self.center, &*self.material));
+                let face_normal = ray.direction().dot(self.center) < 0.0;
+                return Some(Hit::new(
+                    root,
+                    ray,
+                    self.center,
+                    &*self.material,
+                    face_normal,
+                ));
             }
             let root = (-b + d_root) / a;
             if root < t_max && root > t_min {
-                return Some(Hit::new(root, ray, self.center, &*self.material));
+                let face_normal = ray.direction().dot(self.center) < 0.0;
+                return Some(Hit::new(
+                    root,
+                    ray,
+                    self.center,
+                    &*self.material,
+                    face_normal,
+                ));
             }
         }
         None

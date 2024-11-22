@@ -68,12 +68,20 @@ pub struct Hit<'a> {
 }
 
 impl<'a> Hit<'a> {
-    pub fn new(t: f32, ray: &Ray, origin: Vec3, material: &'a dyn Material) -> Self {
+    pub fn new(
+        t: f32,
+        ray: &Ray,
+        origin: Vec3,
+        material: &'a dyn Material,
+        face_normal: bool,
+    ) -> Self {
         let p = ray.point_at(t);
+        let normal = if face_normal { -p - origin } else { p - origin };
+
         Self {
             t,
             p,
-            normal: p - origin,
+            normal,
             material,
         }
     }
