@@ -40,7 +40,7 @@ impl Ray {
         if t > 0.0 {
             let n = (self.point_at(t) - Vec3::new(0.0, 0.0, -1.0)).norm();
             return 0.5 * Vec3::new(n.x + 1.0, n.y + 1.0, n.z + 1.0);
-        }
+        }   
         let norm = self.direction().norm();
         let t = 0.5 * norm.y + 1.0;
         (1.0 - t) * Vec3::ONE + t * Vec3::new(0.5, 0.7, 1.0)
