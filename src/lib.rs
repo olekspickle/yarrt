@@ -147,3 +147,33 @@ pub fn color<T: Surface>(ray: &Ray, world: &List<T>) -> Vec3 {
         (1.0 - t) * Vec3::ONE + t * Vec3::new(0.5, 0.7, 1.0)
     }
 }
+
+pub struct Camera {
+    pub lower_left: Vec3,
+    pub horiz: Vec3,
+    pub vert: Vec3,
+    pub origin: Vec3,
+}
+
+impl Camera {
+    pub fn get_ray(&self, u: f32, v: f32) -> Ray {
+        Ray::new(
+            self.origin,
+            self.lower_left + u * self.horiz + v * self.vert - self.origin,
+        )
+    }
+}
+
+impl Default for Camera {
+    fn default() -> Self {
+        // Note: in the book Peter assumes that y is going up, but
+        // image crate pixel enumeration assumes has y going down,
+        // and honestly I think it's much more intuitive
+        Self {
+            lower_left: Vec3::new(-2.0, 1.0, -1.0),
+            horiz: Vec3::new(4.0, 0.0, 0.0),
+            vert: Vec3::new(0.0, -2.0, 0.0),
+            origin: Vec3::ZERO,
+        }
+    }
+}
