@@ -101,15 +101,16 @@ impl Refractive {
         v - 2.0 * v.dot(n) * n
     }
 
-    fn refract(uv: Vec3, n: Vec3, ni_over_nt: f32) -> Option<Vec3> {
+    fn refract(uv: Vec3, n: Vec3, refraction_ratio: f32) -> Option<Vec3> {
         let dot = uv.dot(n);
-        let discriminant = 1.0 - ni_over_nt.powi(2) * (1.0 - dot * dot);
+        let discriminant = 1.0 - refraction_ratio.powi(2) * (1.0 - dot * dot);
         if discriminant > 0.0 {
-            return Some(ni_over_nt * (uv - n * dot) - n * discriminant.sqrt());
+            return Some(refraction_ratio * (uv - n * dot) - n * discriminant.sqrt());
         }
         None
     }
 
+    /// Simplified Schlick algorithm for reflectance
     fn shlick(cosine: f32, ref_idx: f32) -> f32 {
         let r0 = (1.0 - ref_idx) / (1.0 + ref_idx);
         let r0 = r0 * r0;
@@ -120,21 +121,33 @@ impl Refractive {
 impl Material for Refractive {
     /// It's interesting that the following code overflows stack sometimes...
     /// At least in my laptop.
-    fn scatter(&self, r_in: &Ray, hit: &Hit) -> Option<(Vec3, Ray)> {
-        let reflected = Self::reflect(r_in.direction().unit_vec(), hit.normal);
-        let (outward_normal, ni_over_nt) = if r_in.direction().dot(hit.normal) > 0.0 {
-            (-hit.normal, self.refractive_index)
+    fn scatter(&self, ray: &Ray, hit: &Hit) -> Option<(Vec3, Ray)> {
+        let reflected = Self::reflect(ray.direction().unit_vec(), hit.normal);
+        let (outward_normal, refraction_ratio, cosine) = if ray.direction().dot(hit.normal) > 0.0 {
+            (
+                -hit.normal,
+                self.refractive_index,
+                self.refractive_index * ray.direction().dot(hit.normal) / ray.direction().length(),
+            )
         } else {
-            (hit.normal, 1.0 / self.refractive_index)
+            (
+                hit.normal,
+                1.0 / self.refractive_index,
+                -ray.direction().dot(hit.normal) / ray.direction().length(),
+            )
         };
-        let refracted = Self::refract(r_in.direction(), outward_normal, ni_over_nt);
-        let attenuation = Vec3::new(1.0, 1.0, 1.0);
-        if let Some(refracted) = refracted {
-            return Some((attenuation, Ray::new(hit.p, refracted)));
+        let refracted = Self::refract(ray.direction(), outward_normal, refraction_ratio);
+        let attenuation = Vec3::splat(1.0);
+        let default_scattered = Ray::new(hit.p, reflected);
+        let random = rand::thread_rng().gen_range(0.0..1.0);
+        let prob = refracted
+            .map(|_| Self::shlick(cosine, self.refractive_index))
+            .unwrap_or(1.0);
+        let refracted = refracted.unwrap_or(Vec3::splat(0.5));
+        if random < prob {
+            return Some((attenuation, default_scattered));
         } else {
-            // In this branch Peter returns false.
-            // It's important to keep the expected behavior
-            return Some((attenuation, Ray::new(hit.p, reflected)));
+            return Some((attenuation, Ray::new(hit.p, refracted)));
         }
         // refracted
         //     .map(|refracted| Some((attenuation, Ray::new(hit.p, refracted))))

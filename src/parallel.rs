@@ -7,7 +7,7 @@ pub const DIM: f32 = 200.0;
 pub const HEIGHT: f32 = DIM;
 pub const WIDTH: f32 = DIM * 2.0;
 pub const ANTIALIASING: i32 = 50;
-pub const DEPTH: i32 = 3;
+pub const DEPTH: i32 = 1;
 
 /// The heavy lifting starts here.
 /// This function allocates with size exactly if images pixels
