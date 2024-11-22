@@ -26,6 +26,8 @@ pub trait Material {
     fn scatter(&self, ray: &Ray, hit: &Hit) -> Option<(Vec3, Ray)>;
 }
 
+pub type BoxedMaterial = Box<dyn Material + Send + Sync + 'static>;
+
 /// Represent simple materials that neither reflect nor refract
 /// light rays
 #[derive(Clone)]

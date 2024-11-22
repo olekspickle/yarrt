@@ -1,21 +1,21 @@
-use crate::{materials::Material, Hit, Ray, Surface};
+use crate::{materials::BoxedMaterial, BoxedSurface, Hit, Ray, Surface};
 use glam::Vec3;
 
 pub struct Scene {
     pub width: u32,
     pub height: u32,
-    pub world: Vec<Box<dyn Surface>>,
+    pub world: Vec<BoxedSurface>,
     pub camera: Camera,
 }
 
 pub struct Sphere {
     center: Vec3,
     radius: f32,
-    material: Box<dyn Material>,
+    material: BoxedMaterial,
 }
 
 impl Sphere {
-    pub fn new(center: Vec3, radius: f32, material: Box<dyn Material>) -> Self {
+    pub fn new(center: Vec3, radius: f32, material: BoxedMaterial) -> Self {
         Sphere {
             center,
             radius,
@@ -47,11 +47,11 @@ impl Surface for Sphere {
         let p = ray.at(root);
         let normal = (p - self.center) / self.radius;
 
-        Some(Hit::new(root, ray, &*self.material, normal))
+        Some(Hit::new(root, ray, &self.material, normal))
     }
 }
 
-impl Surface for Vec<Box<dyn Surface>> {
+impl Surface for Vec<BoxedSurface> {
     fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<Hit> {
         let mut temp_hit = None;
         let mut closest_so_far = t_max;
@@ -66,6 +66,7 @@ impl Surface for Vec<Box<dyn Surface>> {
     }
 }
 
+#[derive(Clone)]
 pub struct Camera {
     pub lower_left: Vec3,
     pub horiz: Vec3,

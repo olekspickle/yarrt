@@ -3,22 +3,17 @@
 //!
 
 use glam::Vec3;
-use image::{ImageBuffer, Rgb};
-use rand::Rng;
-use rayon::prelude::*;
+use image::{ ImageBuffer, ImageEncoder, Rgb};
 use rt_in_1_weekend::{
-    color,
     materials::{Lambertian, Reflective, Refractive},
-    parallel::{RNG, WIDTH, WORLD},
+    parallel::{self, HEIGHT, WIDTH},
     scene::{Camera, Sphere},
-    utils, Surface,
+    utils, BoxedSurface,
 };
-use std::{cell::Cell, path::Path};
+use std::path::Path;
 
-const DEPTH: i32 = 3;
-
-fn world<'a>() -> Vec<Box<dyn Surface>> {
-    let mut world: Vec<Box<dyn Surface>> = vec![];
+fn world<'a>() -> Vec<BoxedSurface> {
+    let mut world: Vec<BoxedSurface> = vec![];
 
     let diffuse1 = Box::new(Lambertian::new(Vec3::new(0.1, 0.2, 0.5)));
     let diffuse2 = Box::new(Lambertian::new(Vec3::new(0.8, 0.8, 0.0)));
@@ -53,38 +48,12 @@ fn world<'a>() -> Vec<Box<dyn Surface>> {
 
 fn main() {
     let t = utils::Timer::new();
-    // ns is just step count for antialiasing
-    let (w, h, ns) = (WIDTH, HEIGHT, ANTIALIASING);
-    let mut image = Image::new(w as u32, h as u32);
-
-    // let world: Vec<Box<dyn Surface>> = world();
-    WORLD.set(world());
     let camera = Camera::default();
-
-    let mut rng = rand::thread_rng();
-    // for (x, y, pixel) in buf.enumerate_pixels_mut() {
-    //     let mut col = Vec3::ZERO;
-    //     let (x, y) = (x as f32, y as f32);
-
-    //     for _ in 0..ns {
-    //         let rand = rng.gen_range(0.0..1.0);
-
-    //         // This two are pixel's relative coordinates on the screen
-    //         let (u, v) = (((x + rand) / w), ((y + rand) / h));
-    //         let ray = camera.get_ray(u, v);
-    //         // let p = ray.point_at(2.0);
-    //         col += color(&ray, &world, DEPTH);
-    //     }
-
-    //     col /= ns as f32;
-    //     col = Vec3::new(col.x.sqrt(), col.y.sqrt(), col.z.sqrt());
-    //     *pixel = Rgb([
-    //         (col[0] * 255.99) as u8,
-    //         (col[1] * 255.99) as u8,
-    //         (col[2] * 255.99) as u8,
-    //     ]);
-    // }
-
+    let vec = parallel::render(camera, world());
+    let mut buf = ImageBuffer::new(WIDTH as u32, HEIGHT as u32);
+    for ((.., pixel), color) in buf.enumerate_pixels_mut().zip(vec) {
+        *pixel = color
+    }
     utils::save_image(buf, &Path::new("output/scene.png"));
     t.end();
 }

@@ -1,4 +1,4 @@
-use image::{self, ImageBuffer, ImageFormat, Rgb};
+use image::{self, ImageBuffer, ImageFormat, Pixel, Rgb};
 use std::{path::Path, time::Instant};
 use termion::{color, style};
 
@@ -29,33 +29,34 @@ pub fn print_italic(s: &str) {
     print!("{}{s}{}", style::Italic, style::Reset);
 }
 
-pub struct Image(ImageBuffer<Rgb<u8>, Vec<u8>>);
+pub struct Image<P: Pixel>(ImageBuffer<P, Vec<u8>>);
 
-impl From<ImageBuffer<Rgb<u8>, Vec<u8>>> for Image {
+impl<P: Pixel> Image<P> {
+    pub fn new(buf: ImageBuffer<P, Vec<u8>>) -> Self {
+        Self(buf)
+    }
+}
+
+impl From<ImageBuffer<Rgb<u8>, Vec<u8>>> for Image<Rgb<u8>> {
     fn from(buf: ImageBuffer<Rgb<u8>, Vec<u8>>) -> Self {
         Self(buf)
     }
 }
 
-impl From<Image> for ImageBuffer<Rgb<u8>, Vec<u8>> {
-    fn from(image: Image) -> ImageBuffer<Rgb<u8>, Vec<u8>> {
+impl From<Image<Rgb<u8>>> for ImageBuffer<Rgb<u8>, Vec<u8>> {
+    fn from(image: Image<Rgb<u8>>) -> ImageBuffer<Rgb<u8>, Vec<u8>> {
         image.0
     }
 }
 
-impl Image {
+impl<P: Pixel> Image<P> {
     /// Get reference to the inner image buffer
-    pub fn buf(&self) -> &ImageBuffer<Rgb<u8>, Vec<u8>> {
+    pub fn buf(&self) -> &ImageBuffer<P, Vec<u8>> {
         &self.0
     }
 
     /// Get inner image buffer as mutable
-    pub fn buf_mut(&mut self) -> &mut ImageBuffer<Rgb<u8>, Vec<u8>> {
+    pub fn buf_mut(&mut self) -> &mut ImageBuffer<P, Vec<u8>> {
         &mut self.0
-    }
-
-    pub fn assign_pixel(&mut self, x: i32, y: i32, value: Rgb<u8>) {
-        let pixel = self.buf_mut().get_pixel_mut(x as u32, y as u32);
-        *pixel = value;
     }
 }

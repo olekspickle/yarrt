@@ -7,60 +7,31 @@ use glam::Vec3;
 use image::Rgb;
 use rand::Rng;
 
-use materials::Material;
-use parallel::{HEIGHT, RNG, WIDTH};
+use materials::BoxedMaterial;
+use parallel::{ANTIALIASING, DEPTH, HEIGHT, WIDTH};
 use scene::Camera;
 
-const ANTIALIASING: i32 = 50;
+///
+pub fn ray_color(x: f32, y: f32, camera: &Camera, world: &Vec<BoxedSurface>) -> Rgb<u8> {
+    let mut col = Vec3::ZERO;
+    let mut rng = rand::thread_rng();
 
-/// For ray calculate color in the given world - list of objects with coordinates
-pub fn color(ray: &Ray, world: &Vec<Box<dyn Surface>>, depth: i32) -> Vec3 {
-    if let Some(hit) = world.hit(ray, 0.001, f32::MAX) {
-        if let Some((attenuation, scattered)) = hit.material.scatter(ray, &hit) {
-            let col: Vec3 = color(&scattered, world, depth + 1);
-            return attenuation * col;
-        }
-    }
-
-    let norm = ray.direction().unit_vec();
-    let t = 0.5 * norm.y + 1.0;
-    (1.0 - t) * Vec3::ONE + t * Vec3::new(0.5, 0.7, 1.0)
-}
-
-pub fn pixel_color(x: f32, y: f32, camera: &Camera, world: &Vec<dyn Surface>) -> Rgb<u8> {
     for _ in 0..ANTIALIASING {
-        let rand = RNG.get_mut().gen_range(0.0..1.0);
+        let rand = rng.gen_range(0.0..1.0);
 
         // This two are pixel's relative coordinates on the screen
         let (u, v) = (((x + rand) / WIDTH), ((y + rand) / HEIGHT));
         let ray = camera.get_ray(u, v);
-        // let p = ray.point_at(2.0);
-        col += color(&ray, &world, DEPTH);
+        col += ray.color(&world, DEPTH);
     }
 
-    col /= ns as f32;
+    col /= ANTIALIASING as f32;
     col = Vec3::new(col.x.sqrt(), col.y.sqrt(), col.z.sqrt());
     Rgb([
         (col[0] * 255.99) as u8,
         (col[1] * 255.99) as u8,
         (col[2] * 255.99) as u8,
     ])
-}
-
-pub fn set_pixel(x: f32, y: f32, pixel: &mut Rgb<u8>) {
-    let mut col = Vec3::ZERO;
-    let pool = rayon::ThreadPoolBuilder::new().build().unwrap();
-    // let chunks =
-    let mut v1 = RawImageView::new(&mut buf, 0, 0, 10, 10);
-    let mut v2 = RawImageView::new(&mut buf, 10, 0, 10, 10);
-    pool.scope(|s| {
-        s.spawn(|_| {
-            modify(&mut v1);
-        });
-        s.spawn(|_| {
-            modify(&mut v2);
-        });
-    });
 }
 
 pub trait Vec3Ext<T> {
@@ -96,6 +67,20 @@ impl Ray {
     pub fn at(&self, t: f32) -> Vec3 {
         self.a + t * self.b
     }
+
+    /// For ray calculate color in the given world - list of objects with coordinates
+    pub fn color(&self, world: &Vec<BoxedSurface>, depth: i32) -> Vec3 {
+        if let Some(hit) = world.hit(&self, 0.001, f32::MAX) {
+            if let Some((attenuation, scattered)) = hit.material.scatter(self, &hit) {
+                let col: Vec3 = scattered.color(world, depth + 1);
+                return attenuation * col;
+            }
+        }
+
+        let norm = self.direction().unit_vec();
+        let t = 0.5 * norm.y + 1.0;
+        (1.0 - t) * Vec3::ONE + t * Vec3::new(0.5, 0.7, 1.0)
+    }
 }
 
 #[derive(Clone)]
@@ -109,11 +94,11 @@ pub struct Hit<'a> {
     pub p: Vec3,
     /// Normal of the surface
     pub normal: Vec3,
-    pub material: &'a dyn Material,
+    pub material: &'a BoxedMaterial,
 }
 
 impl<'a> Hit<'a> {
-    pub fn new(t: f32, ray: &Ray, material: &'a dyn Material, normal: Vec3) -> Self {
+    pub fn new(t: f32, ray: &Ray, material: &'a BoxedMaterial, normal: Vec3) -> Self {
         let p = ray.at(t);
 
         Self {
@@ -128,3 +113,7 @@ impl<'a> Hit<'a> {
 pub trait Surface {
     fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<Hit>;
 }
+
+pub type BoxedSurface = Box<dyn Surface + Sync + Send + 'static>;
+
+// unsafe impl std::marker::Sync for Box<dyn Surface> {}
