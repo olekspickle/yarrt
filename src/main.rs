@@ -9,14 +9,17 @@ use std::path::Path;
 
 const DIM: u32 = 200;
 
+
 fn main() {
     let (w, h) = (DIM as f32 * 2.0, DIM as f32);
     let mut buf = ImageBuffer::new(w as u32, h as u32);
 
+    // Note: in the book Peter assumes that y is going up, but
+    // image crate has y going down, and honestly I think its more intuitive
     let (lower_left, horiz, vert, origin) = (
-        Vec3::new(-2.0, -1.0, -1.0),
+        Vec3::new(-2.0, 1.0, -1.0),
         Vec3::new(4.0, 0.0, 0.0),
-        Vec3::new(0.0, 2.0, 0.0),
+        Vec3::new(0.0, -2.0, 0.0),
         Vec3::ZERO,
     );
     for (x, y, pixel) in buf.enumerate_pixels_mut() {

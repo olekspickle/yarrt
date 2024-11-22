@@ -4,11 +4,11 @@ use glam::Vec3;
 
 pub trait Vec3Ext<T> {
     /// Unit vector: v / v.length()
-    fn unit_vector(&self) -> T;
+    fn norm(&self) -> T;
 }
 
 impl Vec3Ext<Vec3> for Vec3 {
-    fn unit_vector(&self) -> Vec3 {
+    fn norm(&self) -> Vec3 {
         *self / self.length()
     }
 }
@@ -36,8 +36,8 @@ impl Ray {
     }
 
     pub fn color(&self) -> Vec3 {
-        let unit_direction = self.direction().unit_vector();
-        let t = 0.5 * unit_direction.y + 1.0;
+        let norm = self.direction().norm();
+        let t = 0.5 * norm.y + 1.0;
         (1.0 - t) * Vec3::ONE + t * Vec3::new(0.5, 0.7, 1.0)
     }
 }
